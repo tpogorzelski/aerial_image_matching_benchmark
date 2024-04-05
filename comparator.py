@@ -6,6 +6,7 @@ import torch
 import time
 import json 
 import argparse
+import gc
 
 # os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:21'
 
@@ -33,14 +34,11 @@ def rotate_image(image, angle):
     center = (width // 2, height // 2)
 
     return cv2.warpAffine(image, cv2.getRotationMatrix2D(center, angle, scale=1.0), (width, height))
-   
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='dataset path')
-    
     parser.add_argument('dataset_path', type=str, help='Path to the folder containing the dataset.')
-
     args = parser.parse_args()
-    
     folders = os.listdir(args.dataset_path)
     
     match_threshold = 0.1
@@ -56,10 +54,10 @@ if __name__ == "__main__":
     for folder in folders:
         print('\n', folder, end=': ')
         image0 = cv2.imread(dataset_path + folder + "/camera.jpg")
-        image0 = cv2.resize(image0, (0,0), fx=0.25, fy=0.25)
+        # image0 = cv2.resize(image0, (0,0), fx=0.25, fy=0.25)
         
-        image1 = cv2.imread(dataset_path + folder + "/map.jpg")
-        image1 = cv2.resize(image1, (0,0), fx=0.25, fy=0.25)
+        image1 = cv2.imread(dataset_path + folder + "/map_arcgis.jpg")
+        # image1 = cv2.resize(image1, (0,0), fx=0.25, fy=0.25)
         
         with open(dataset_path + folder + '/parameters.json', 'r') as file:
             parameters = json.load(file)
@@ -76,19 +74,27 @@ if __name__ == "__main__":
         for matcher in list_of_matchers:
             print("\033[92mMatcher: {} \033[0m".format(matcher))
             
+            input = image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, matcher, None
+            
             try:
                 #check without rotation
                 torch.cuda.empty_cache()
                 start_time = time.time()
-                output = utils.run_matching(image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, matcher, None)
+                output = utils.run_matching(*input)
                 raw_row.update({matcher:output[3]['number raw matches']})         
                 ransac_row.update({matcher:output[3]['number ransac matches']})
                 time_row.update({matcher:round(time.time() - start_time, 2)})
                 remaining_matchers.remove(matcher)
                 
-                #check after rotation
+                del output
+                gc.collect()
+                
+                # check after rotation
                 output = utils.run_matching(image0, image1_rotated, match_threshold, extract_max_keypoints, keypoint_threshold, matcher, None)
                 ransac_row_rotated.update({matcher:output[3]['number raw matches']})  
+                
+                del output
+                gc.collect()
                 
             except Exception as e:
                 print(e)
