@@ -8,7 +8,7 @@ import json
 import argparse
 import gc
 
-# os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:21'
+# os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:30'
 
 headers = {'folder': None}
 list_of_matchers = utils.matcher_zoo.keys()
@@ -37,12 +37,13 @@ def rotate_image(image, angle):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='folder path, map provider')
-    parser.add_argument('folder_path', type=str, help='Path to the folder containing the dataset.')
+    parser.add_argument('file_path', type=str, help='Path to the folder containing the dataset.')
     parser.add_argument('map_provider', type=str, help='Specify map provider from folder.')
     parser.add_argument('rotation', type=str, help='Specify if map should be rotated.')
     args = parser.parse_args()
-    
-    folder = args.folder_path
+  
+    file_name = os.path.basename(args.file_path)
+    dataset_folder = os.path.dirname(os.path.dirname(args.file_path))
     map_provider = args.map_provider
     map_rotation = args.rotation
     
@@ -53,30 +54,29 @@ if __name__ == "__main__":
 
     if map_rotation == 'True':
         print('Map rotation is enabled.')
-        raw_matches = File(folder + '/../raw_matches_' + map_provider + '_rotated' + '.txt')
-        ransac_matches = File(folder + '/../ransac_matches_' + map_provider + '_rotated' + '.txt')
-        time_matches = File(folder + '/../time_matches_' + map_provider + '_rotated' + '.txt')
-    else:
-        raw_matches = File(folder + '/../raw_matches_' + map_provider + '.txt')
-        ransac_matches = File(folder + '/../ransac_matches_' + map_provider + '.txt')
-        time_matches = File(folder + '/../time_matches_' + map_provider + '.txt')
+        raw_matches = File(dataset_folder + '/raw_matches_' + map_provider + '_rotated' + '.txt')
+        ransac_matches = File(dataset_folder + '/ransac_matches_' + map_provider + '_rotated' + '.txt')
+        time_matches = File(dataset_folder + '/time_matches_' + map_provider + '_rotated' + '.txt')
+    elif map_rotation == 'False':
+        raw_matches = File(dataset_folder + '/raw_matches_' + map_provider + '.txt')
+        ransac_matches = File(dataset_folder + '/ransac_matches_' + map_provider + '.txt')
+        time_matches = File(dataset_folder + '/time_matches_' + map_provider + '.txt')
         
-    print("\033[94mFolder: {} \033[0m".format(f'\n {folder}, {map_provider}, rotation: {map_rotation} \n'))
-    image0 = cv2.imread(folder + "/camera.jpg")
+    image0 = cv2.imread(args.file_path)
     # image0 = cv2.resize(image0, (0,0), fx=0.1, fy=0.1)
     
-    image1 = cv2.imread(folder + "/map_" + map_provider + ".jpg")
+    image1 = cv2.imread(dataset_folder + "/" + map_provider + "/" + file_name)
     # image1 = cv2.resize(image1, (0,0), fx=0.1, fy=0.1)
     
-    with open(folder + '/parameters.json', 'r') as file:
+    with open(args.file_path[:-4] + '.json', 'r') as file:
         parameters = json.load(file)
     
     if map_rotation:
         image1 = rotate_image(image1, parameters['yaw'])
     
-    raw_row = {'folder': os.path.basename(folder)}
-    ransac_row = {'folder': os.path.basename(folder)}
-    time_row = {'folder': os.path.basename(folder)}
+    raw_row = {'folder': file_name}
+    ransac_row = {'folder': file_name}
+    time_row = {'folder': file_name}
     
     remaining_matchers = list(list_of_matchers)
     
