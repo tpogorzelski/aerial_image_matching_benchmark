@@ -1,7 +1,7 @@
 #!/bin/bash
 
-DATASET_PATH="/mnt/d/Pobrane/dataset/"
-PYTHON_INTERPRETER="/home/tomek/anaconda3/envs/imw/bin/python3"
+DATASET_PATH="dataset"
+PYTHON_INTERPRETER="python"
 PYTHON_SCRIPT="matcher.py"
 
 find "$DATASET_PATH"gopro -mindepth 1 -maxdepth 1 -type f -name "*.jpg" | while read file
