@@ -1,13 +1,13 @@
 #!/bin/bash
 
-DATASET_PATH="/mnt/d/Pobrane/dataset"
-PYTHON_INTERPRETER="python3"
-PYTHON_SCRIPT="./matcher.py"
+if [ ! -d "third_party/SGMNet/weights" ]; then
+    tar -xzf third_party/SGMNet/weights.tar.gz -C third_party/SGMNet
+fi
 
+DATASET_PATH="/mnt/d/Pobrane/dataset"
 matchers_list=("loftr" "topicfm" "aspanformer" "dedode" "superpoint+superglue" "superpoint+lightglue" "disk" "disk+dualsoftmax" "superpoint+dualsoftmax" "disk+lightglue" "superpoint+mnn" "sift+sgmnet" "sosnet" "hardnet" "d2net" "rord" "alike" "lanet" "r2d2" "darkfeat" "sift" "roma" "DKMv3" "gluestick" "sold2")
 
 for matcher in "${matchers_list[@]}"; do
     echo "$matcher"
-    $PYTHON_INTERPRETER $PYTHON_SCRIPT $DATASET_PATH $matcher
+    python3 matcher.py $DATASET_PATH $matcher
 done
-

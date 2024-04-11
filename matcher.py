@@ -12,7 +12,7 @@ import tqdm
 field_names = ['file_gopro']
 list_providers = ['arcgis', 'google', 'geoportal']
 for provider in list_providers:
-    field_names += ['raw_'+provider, 'ransac_'+provider, 'time_'+provider, 'ransac_rot_'+provider, 'time_rot_'+provider]
+    field_names += ['raw_'+provider, 'ransac_'+provider, 'H_'+provider, 'F_'+provider, 'time_'+provider, 'ransac_rot_'+provider, 'H_rot'+provider, 'F_rot'+provider, 'time_rot_'+provider]
 
 class File():
     def __init__(self, file_name):
@@ -41,44 +41,63 @@ if __name__ == "__main__":
 
     dataset_folder = args.dataset
     
-    matcher_csv = File(dataset_folder + '/' + args.matcher + '.txt')
+    matcher_csv = File(dataset_folder + '/' + args.matcher + '.csv')
     
     match_threshold = 0.1
     extract_max_keypoints = 1000
     keypoint_threshold = 0.015
     DEFAULT_RANSAC = "USAC_MAGSAC"
     
-    for filename in tqdm.tqdm([filename for filename in os.listdir(dataset_folder + "/gopro") if filename.endswith('.jpg')]):
+    for filename in tqdm.tqdm([filename for filename in sorted(os.listdir(dataset_folder + "/gopro")) if filename.endswith('.jpg')]):
         
         csv_row = {'file_gopro': filename}
         
         for provider in list_providers:
             
             image0 = cv2.imread(dataset_folder + "/gopro/" + filename)
+            #image0 = cv2.resize(image0, (320, 320))
             image1 = cv2.imread(dataset_folder + "/" + provider + "/" + filename)
+            #image1 = cv2.resize(image1, (320, 320))
+                                
+            try:
+                torch.cuda.empty_cache()
+                start_time = time.time()
+                output = utils.run_matching(image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, args.matcher, None)
 
-            start_time = time.time()
-            output = utils.run_matching(image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, args.matcher, None)
-            csv_row.update({'raw_'+provider:output[3]['number raw matches']})         
-            csv_row.update({'ransac_'+provider:output[3]['number ransac matches']})
-            csv_row.update({'time_'+provider:round(time.time() - start_time, 2)})
-            
-            del output
-            gc.collect()
-            
-            with open(dataset_folder + "/gopro/" + filename[:-4] + '.json', 'r') as file:
-                yaw_angle = json.load(file)['yaw']
+                csv_row.update({'time_'+provider:int((time.time() - start_time)*1000)})
+                csv_row.update({'raw_'+provider:output[3]['number raw matches']})         
+                csv_row.update({'ransac_'+provider:output[3]['number ransac matches']})
+            except Exception as e:
+                print(e)
+                
+            try:
+                csv_row.update({'H_'+provider:output[5]["geom_info"]["Homography"]})
+                csv_row.update({'F_'+provider:output[5]["geom_info"]["Fundamental"]})
+            except Exception as e:
+                pass
+                
+                with open(dataset_folder + "/gopro/" + filename[:-4] + '.json', 'r') as file:
+                    yaw_angle = json.load(file)['yaw']
 
-            image1 = rotate_image(image1, yaw_angle)
+                image1 = rotate_image(image1, yaw_angle)
+                
+            try:    
+                start_time = time.time()
+                output = utils.run_matching(image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, args.matcher, None)
+                csv_row.update({'time_rot_'+provider:int((time.time() - start_time)*1000)})
+                csv_row.update({'ransac_rot_'+provider:output[3]['number ransac matches']})
+            except Exception as e:
+                print(e)
             
-            start_time = time.time()
-            output = utils.run_matching(image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, args.matcher, None)
-            csv_row.update({'ransac_rot_'+provider:output[3]['number ransac matches']})
-            csv_row.update({'time_rot_'+provider:round(time.time() - start_time, 2)})    
-
-            del output
-            gc.collect()   
-        
+            try:      
+                csv_row.update({'H_rot'+provider:output[5]["geom_info"]["Homography"]})
+                csv_row.update({'F_rot'+provider:output[5]["geom_info"]["Fundamental"]})
+            except Exception as e:
+                pass
+                   
+                del output
+                gc.collect()  
+                   
         matcher_csv.write_row(csv_row)
                    
     matcher_csv.close()
