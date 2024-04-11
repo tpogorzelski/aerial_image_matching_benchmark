@@ -270,28 +270,28 @@ def display_matches(pred: dict, titles=[], dpi=300):
             mconf = pred["mconf"]
         else:
             mconf = np.ones(len(mkpts0))
-        fig_mkpts = draw_matches(
-            mkpts0,
-            mkpts1,
-            img0,
-            img1,
-            mconf,
-            dpi=dpi,
-            titles=titles,
-        )
-        fig = fig_mkpts
+        # fig_mkpts = draw_matches(
+        #     mkpts0,
+        #     mkpts1,
+        #     img0,
+        #     img1,
+        #     mconf,
+        #     dpi=dpi,
+        #     titles=titles,
+        # )
+        # fig = fig_mkpts
     if "line0_orig" in pred.keys() and "line1_orig" in pred.keys():
         # lines
         mtlines0 = pred["line0_orig"]
         mtlines1 = pred["line1_orig"]
         num_inliers = len(mtlines0)
-        fig_lines = plot_images(
-            [img0.squeeze(), img1.squeeze()],
-            ["Image 0 - matched lines", "Image 1 - matched lines"],
-            dpi=300,
-        )
-        fig_lines = plot_color_line_matches([mtlines0, mtlines1], lw=2)
-        fig_lines = fig2im(fig_lines)
+        # fig_lines = plot_images(
+        #     [img0.squeeze(), img1.squeeze()],
+        #     ["Image 0 - matched lines", "Image 1 - matched lines"],
+        #     dpi=300,
+        # )
+        # fig_lines = plot_color_line_matches([mtlines0, mtlines1], lw=2)
+        # fig_lines = fig2im(fig_lines)
 
         # keypoints
         mkpts0 = pred["line_keypoints0_orig"]
@@ -299,27 +299,42 @@ def display_matches(pred: dict, titles=[], dpi=300):
 
         if mkpts0 is not None and mkpts1 is not None:
             num_inliers = len(mkpts0)
-            if "mconf" in pred.keys():
-                mconf = pred["mconf"]
-            else:
-                mconf = np.ones(len(mkpts0))
-            fig_mkpts = draw_matches(mkpts0, mkpts1, img0, img1, mconf, dpi=300)
-            fig_lines = cv2.resize(
-                fig_lines, (fig_mkpts.shape[1], fig_mkpts.shape[0])
-            )
-            fig = np.concatenate([fig_mkpts, fig_lines], axis=0)
-        else:
-            fig = fig_lines
-    return fig, num_inliers
+            # if "mconf" in pred.keys():
+            #     mconf = pred["mconf"]
+            # else:
+            #     mconf = np.ones(len(mkpts0))
+            # fig_mkpts = draw_matches(mkpts0, mkpts1, img0, img1, mconf, dpi=300)
+            # fig_lines = cv2.resize(
+            #     fig_lines, (fig_mkpts.shape[1], fig_mkpts.shape[0])
+            # )
+            # fig = np.concatenate([fig_mkpts, fig_lines], axis=0)
+        # else:
+        #     fig = fig_lines
+    return None, num_inliers
 
+def load_model(key, match_threshold, extract_max_keypoints):
+    model = matcher_zoo[key]
+    
+    match_conf = model["config"]
+    # update match config
+    match_conf["model"]["match_threshold"] = match_threshold
+    match_conf["model"]["max_keypoints"] = extract_max_keypoints
 
+    matcher = get_model(match_conf)
+    
+    return model, match_conf, matcher
+
+    # image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, model, match_conf, matcher
 def run_matching(
     image0,
     image1,
     match_threshold,
     extract_max_keypoints,
     keypoint_threshold,
-    key,
+    # key,
+    model, 
+    match_conf, 
+    matcher,
     ransac_method=DEFAULT_RANSAC_METHOD,
     ransac_reproj_threshold=DEFAULT_RANSAC_REPROJ_THRESHOLD,
     ransac_confidence=DEFAULT_RANSAC_CONFIDENCE,
@@ -335,17 +350,10 @@ def run_matching(
         image1 = image1['composite']
 
     # init output
-    output_keypoints = None
-    output_matches_raw = None
-    output_matches_ransac = None
+    # output_keypoints = None
+    # output_matches_raw = None
+    # output_matches_ransac = None
 
-    model = matcher_zoo[key]
-    match_conf = model["config"]
-    # update match config
-    match_conf["model"]["match_threshold"] = match_threshold
-    match_conf["model"]["max_keypoints"] = extract_max_keypoints
-
-    matcher = get_model(match_conf)
     if model["dense"]:
         pred = match_dense.match_images(
             matcher, image0, image1, match_conf["preprocessing"], device=device
@@ -372,15 +380,15 @@ def run_matching(
         "Image 0 - Keypoints",
         "Image 1 - Keypoints",
     ]
-    output_keypoints = plot_images([image0, image1], titles=titles, dpi=300)
-    if "keypoints0" in pred.keys() and "keypoints1" in pred.keys():
-        plot_keypoints([pred["keypoints0"], pred["keypoints1"]])
-        text = (
-            f"# keypoints0: {len(pred['keypoints0'])} \n"
-            + f"# keypoints1: {len(pred['keypoints1'])}"
-        )
-        add_text(0, text, fs=15)
-    output_keypoints = fig2im(output_keypoints)
+    # output_keypoints = plot_images([image0, image1], titles=titles, dpi=300)
+    # if "keypoints0" in pred.keys() and "keypoints1" in pred.keys():
+    #     plot_keypoints([pred["keypoints0"], pred["keypoints1"]])
+    #     text = (
+    #         f"# keypoints0: {len(pred['keypoints0'])} \n"
+    #         + f"# keypoints1: {len(pred['keypoints1'])}"
+    #     )
+    #     add_text(0, text, fs=15)
+    # output_keypoints = fig2im(output_keypoints)
 
     # plot images with raw matches
     titles = [
@@ -410,19 +418,19 @@ def run_matching(
 
     # plot wrapped images
     geom_info = compute_geom(pred)
-    output_wrapped, _ = change_estimate_geom(
-        pred["image0_orig"],
-        pred["image1_orig"],
-        {"geom_info": geom_info},
-        choice_estimate_geom,
-    )
+    # output_wrapped, _ = change_estimate_geom(
+    #     pred["image0_orig"],
+    #     pred["image1_orig"],
+    #     {"geom_info": geom_info},
+    #     choice_estimate_geom,
+    # )
 
     del pred
 
     return (
-        output_keypoints,
-        output_matches_raw,
-        output_matches_ransac,
+        None,
+        None,
+        None,
         {
             "number raw matches": num_matches_raw,
             "number ransac matches": num_matches_ransac,
@@ -434,10 +442,9 @@ def run_matching(
         {
             "geom_info": geom_info,
         },
-        output_wrapped,
+        None,
     )
-
-
+    
 # @ref: https://docs.opencv.org/4.x/d0/d74/md__build_4_x-contrib_docs-lin64_opencv_doc_tutorials_calib3d_usac.html
 # AND: https://opencv.org/blog/2021/06/09/evaluating-opencvs-new-ransacs
 ransac_zoo = {
