@@ -7,21 +7,20 @@ import time
 import json 
 import argparse
 import gc
+import tqdm
 
-# os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:30'
+field_names = ['file_gopro']
+list_providers = ['arcgis', 'google', 'geoportal']
+for provider in list_providers:
+    field_names += ['raw_'+provider, 'ransac_'+provider, 'time_'+provider, 'ransac_rot_'+provider, 'time_rot_'+provider]
 
-headers = {'folder': None}
-list_of_matchers = utils.matcher_zoo.keys()
-headers.update(dict.fromkeys(list_of_matchers, None))
-field_names = list(headers.keys())
-    
 class File():
     def __init__(self, file_name):
-        self.file = open(file_name, 'a')
-        self.writer = csv.DictWriter(self.file, fieldnames = field_names, delimiter=",")
-        if os.stat(file_name).st_size == 0:
-            self.writer.writeheader()
-    
+        self.file = open(file_name, 'w')
+        self.writer = csv.DictWriter(self.file, fieldnames = field_names, delimiter=";")
+        self.writer.writeheader()
+        print("Created file: ", file_name)
+        
     def write_row(self, row):
         self.writer.writerow(row)
         self.file.flush()
@@ -36,81 +35,53 @@ def rotate_image(image, angle):
     return cv2.warpAffine(image, cv2.getRotationMatrix2D(center, angle, scale=1.0), (width, height))
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='folder path, map provider')
-    parser.add_argument('file_path', type=str, help='Path to the folder containing the dataset.')
-    parser.add_argument('map_provider', type=str, help='Specify map provider from folder.')
-    parser.add_argument('rotation', type=str, help='Specify if map should be rotated.')
+    parser = argparse.ArgumentParser(description='dataset_folder matcher')
+    parser.add_argument('dataset', type=str, help='Path to the folder containing the dataset.')
+    parser.add_argument('matcher', type=str, help='name of matcher to use.')
     args = parser.parse_args()
-  
-    file_name = os.path.basename(args.file_path)
-    dataset_folder = os.path.dirname(os.path.dirname(args.file_path))
-    map_provider = args.map_provider
-    map_rotation = args.rotation
+
+    dataset_folder = args.dataset
+    
+    matcher_csv = File(dataset_folder + '/' + args.matcher + '.txt')
     
     match_threshold = 0.1
     extract_max_keypoints = 1000
     keypoint_threshold = 0.015
     DEFAULT_RANSAC = "USAC_MAGSAC"
+    
+    for filename in tqdm.tqdm([filename for filename in os.listdir(dataset_folder + "/gopro") if filename.endswith('.jpg')]):
+        
+        csv_row = {'file_gopro': filename}
+        
+        for provider in list_providers:
+            
+            image0 = cv2.imread(dataset_folder + "/gopro/" + filename)
+            image1 = cv2.imread(dataset_folder + "/" + provider + "/" + filename)
 
-    if map_rotation == 'True':
-        print('Map rotation is enabled.')
-        raw_matches = File(dataset_folder + '/raw_matches_' + map_provider + '_rotated' + '.txt')
-        ransac_matches = File(dataset_folder + '/ransac_matches_' + map_provider + '_rotated' + '.txt')
-        time_matches = File(dataset_folder + '/time_matches_' + map_provider + '_rotated' + '.txt')
-    elif map_rotation == 'False':
-        raw_matches = File(dataset_folder + '/raw_matches_' + map_provider + '.txt')
-        ransac_matches = File(dataset_folder + '/ransac_matches_' + map_provider + '.txt')
-        time_matches = File(dataset_folder + '/time_matches_' + map_provider + '.txt')
-        
-    image0 = cv2.imread(args.file_path)
-    # image0 = cv2.resize(image0, (0,0), fx=0.1, fy=0.1)
-    
-    image1 = cv2.imread(dataset_folder + "/" + map_provider + "/" + file_name)
-    # image1 = cv2.resize(image1, (0,0), fx=0.1, fy=0.1)
-    
-    with open(args.file_path[:-4] + '.json', 'r') as file:
-        parameters = json.load(file)
-    
-    if map_rotation:
-        image1 = rotate_image(image1, parameters['yaw'])
-    
-    raw_row = {'folder': file_name}
-    ransac_row = {'folder': file_name}
-    time_row = {'folder': file_name}
-    
-    remaining_matchers = list(list_of_matchers)
-    
-    for matcher in list_of_matchers:
-        print("\033[92mMatcher: {} \033[0m".format(matcher))
-        
-        input = image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, matcher, None
-        
-        try:
-            torch.cuda.empty_cache()
             start_time = time.time()
-            output = utils.run_matching(*input)
-            raw_row.update({matcher:output[3]['number raw matches']})         
-            ransac_row.update({matcher:output[3]['number ransac matches']})
-            time_row.update({matcher:round(time.time() - start_time, 2)})
-            remaining_matchers.remove(matcher)
+            output = utils.run_matching(image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, args.matcher, None)
+            csv_row.update({'raw_'+provider:output[3]['number raw matches']})         
+            csv_row.update({'ransac_'+provider:output[3]['number ransac matches']})
+            csv_row.update({'time_'+provider:round(time.time() - start_time, 2)})
             
             del output
             gc.collect()
             
-        except Exception as e:
-            print(e)
-            continue
-     
-    if len(remaining_matchers) > 0:
-        print('### failed:', remaining_matchers, ' ###')
-    else:
-        print('### all success ###')
-      
-    raw_matches.write_row(raw_row)    
-    ransac_matches.write_row(ransac_row)
-    time_matches.write_row(time_row)
-             
-    raw_matches.close()
-    ransac_matches.close()
-    time_matches.close()
+            with open(dataset_folder + "/gopro/" + filename[:-4] + '.json', 'r') as file:
+                yaw_angle = json.load(file)['yaw']
+
+            image1 = rotate_image(image1, yaw_angle)
+            
+            start_time = time.time()
+            output = utils.run_matching(image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, args.matcher, None)
+            csv_row.update({'ransac_rot_'+provider:output[3]['number ransac matches']})
+            csv_row.update({'time_rot_'+provider:round(time.time() - start_time, 2)})    
+
+            del output
+            gc.collect()   
+        
+        matcher_csv.write_row(csv_row)
+                   
+    matcher_csv.close()
+
 
