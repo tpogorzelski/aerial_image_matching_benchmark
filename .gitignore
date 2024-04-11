@@ -21,3 +21,5 @@ gradio_cached_examples
 hloc/matchers/quadtree.py
 third_party/QuadTreeAttention
 desktop.ini
+third_party/**
+weights/
