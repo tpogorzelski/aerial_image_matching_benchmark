@@ -31,7 +31,6 @@ class File():
 def rotate_image(image, angle):
     height, width = image.shape[:2]
     center = (width // 2, height // 2)
-
     return cv2.warpAffine(image, cv2.getRotationMatrix2D(center, angle, scale=1.0), (width, height))
 
 if __name__ == "__main__":
