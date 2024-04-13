@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore")
 field_names = ['file_gopro']
 list_providers = ['arcgis', 'google', 'geoportal']
 for provider in list_providers:
-    field_names += ['raw_'+provider, 'ransac_'+provider, 'H_'+provider, 'F_'+provider, 'time_'+provider, 'ransac_rot_'+provider, 'H_rot'+provider, 'F_rot'+provider, 'time_rot_'+provider]
+    field_names += ['raw_'+provider, 'ransac_'+provider, 'H_'+provider, 'F_'+provider, 'time_'+provider, 'ransac_rot_'+provider, 'H_rot_'+provider, 'F_rot_'+provider, 'time_rot_'+provider]
 
 class File():
     def __init__(self, file_name):
@@ -51,8 +51,21 @@ if __name__ == "__main__":
     keypoint_threshold = 0.015
     DEFAULT_RANSAC = "USAC_MAGSAC"
     
-    model, match_conf, matcher = utils.load_model(args.matcher, match_threshold, extract_max_keypoints)
-    
+    model = utils.matcher_zoo[args.matcher]
+    match_conf = model["config"]
+    match_conf["model"]["match_threshold"] = match_threshold
+    match_conf["model"]["max_keypoints"] = extract_max_keypoints
+    matcher = utils.get_model(match_conf)
+        
+    if model["dense"]:
+        extract_conf = None
+        extractor = None  
+    else:
+        extract_conf = model["config_feature"]
+        extract_conf["model"]["max_keypoints"] = extract_max_keypoints
+        extract_conf["model"]["keypoint_threshold"] = keypoint_threshold
+        extractor = utils.get_feature_model(extract_conf) 
+           
     for filename in tqdm.tqdm([filename for filename in sorted(os.listdir(dataset_folder + "/gopro")) if filename.endswith('.jpg')]):
         
         csv_row = {'file_gopro': filename}
@@ -63,21 +76,19 @@ if __name__ == "__main__":
             #image0 = cv2.resize(image0, (320, 320))
             image1 = cv2.imread(dataset_folder + "/" + provider + "/" + filename)
             #image1 = cv2.resize(image1, (320, 320))
-                               
+            
             try:
                 torch.cuda.empty_cache()
                 start_time = time.time()
-                output = utils.run_matching(image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, model, match_conf, matcher, None)
+                output = utils.run_matching(image0, image1, match_threshold, extract_conf, extractor, model, match_conf, matcher, None)
                 csv_row.update({'time_'+provider:int((time.time() - start_time)*1000)})
                 csv_row.update({'raw_'+provider:output[3]['number raw matches']})         
                 csv_row.update({'ransac_'+provider:output[3]['number ransac matches']})
                 
-                try:
+                if len(output[5]["geom_info"]) == 4:
                     csv_row.update({'H_'+provider:output[5]["geom_info"]["Homography"]})
                     csv_row.update({'F_'+provider:output[5]["geom_info"]["Fundamental"]})
-                except:
-                    pass
-            
+                
                 del output
                 
             except Exception as e:
@@ -89,15 +100,13 @@ if __name__ == "__main__":
                 
             try:    
                 start_time = time.time()
-                output = utils.run_matching(image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, model, match_conf, matcher, None)
+                output = utils.run_matching(image0, image1, match_threshold, extract_conf, extractor, model, match_conf, matcher, None)
                 csv_row.update({'time_rot_'+provider:int((time.time() - start_time)*1000)})
                 csv_row.update({'ransac_rot_'+provider:output[3]['number ransac matches']})
                 
-                try:      
-                    csv_row.update({'H_rot'+provider:output[5]["geom_info"]["Homography"]})
-                    csv_row.update({'F_rot'+provider:output[5]["geom_info"]["Fundamental"]})
-                except :
-                    pass
+                if len(output[5]["geom_info"]) == 4:    
+                    csv_row.update({'H_rot_'+provider:output[5]["geom_info"]["Homography"]})
+                    csv_row.update({'F_rot_'+provider:output[5]["geom_info"]["Fundamental"]})
                     
                 del output  
                 

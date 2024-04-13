@@ -312,25 +312,12 @@ def display_matches(pred: dict, titles=[], dpi=300):
         #     fig = fig_lines
     return None, num_inliers
 
-def load_model(key, match_threshold, extract_max_keypoints):
-    model = matcher_zoo[key]
-    
-    match_conf = model["config"]
-    # update match config
-    match_conf["model"]["match_threshold"] = match_threshold
-    match_conf["model"]["max_keypoints"] = extract_max_keypoints
-
-    matcher = get_model(match_conf)
-    
-    return model, match_conf, matcher
-
-    # image0, image1, match_threshold, extract_max_keypoints, keypoint_threshold, model, match_conf, matcher
 def run_matching(
     image0,
     image1,
     match_threshold,
-    extract_max_keypoints,
-    keypoint_threshold,
+    extract_conf,
+    extractor,
     # key,
     model, 
     match_conf, 
@@ -361,11 +348,7 @@ def run_matching(
         del matcher
         extract_conf = None
     else:
-        extract_conf = model["config_feature"]
-        # update extract config
-        extract_conf["model"]["max_keypoints"] = extract_max_keypoints
-        extract_conf["model"]["keypoint_threshold"] = keypoint_threshold
-        extractor = get_feature_model(extract_conf)
+        
         pred0 = extract_features.extract(
             extractor, image0, extract_conf["preprocessing"]
         )
