@@ -14,7 +14,8 @@ def draw_mean_bar_chart(header):
         mean = matcher_data['ransac_arcgis'].mean()
         mean_rot = matcher_data['ransac_rot_arcgis'].mean()
         
-        df = df.append({'matcher': matcher, 'mean': mean, 'mean_rot': mean_rot}, ignore_index=True)
+        new_row = pd.DataFrame({'matcher': [matcher], 'mean': [mean], 'mean_rot': [mean_rot]})
+        df = pd.concat([df, new_row], ignore_index=True)
 
     df_melt = df.melt('matcher', var_name='a', value_name='b')
 
@@ -42,7 +43,8 @@ for filename in filename_list:
     with open(dataset_path + "gopro/" + str(filename) + '.json', 'r') as file:
         data = json.load(file)
         data["file_gopro"] = filename
-        json_data = json_data.append(data, ignore_index=True)
+        data_df = pd.DataFrame([data]) 
+        json_data = pd.concat([json_data, data_df], ignore_index=True)
     
 st.header('Angles during flight')
 col1, col2, col3 = st.columns(3)
@@ -92,7 +94,7 @@ for matcher in matchers_list:
     
     data = pd.read_csv(dataset_path + matcher + ".csv", sep=";")
     for i, name in enumerate(data[data.columns[0]]):
-        data[data.columns[0]][i] = int(name[:-4])
+        data.loc[i, data.columns[0]] = int(name[:-4])  
       
     st.header(matcher)
     col1, col2, col3 = st.columns(3)
