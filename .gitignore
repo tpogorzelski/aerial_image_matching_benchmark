@@ -12,7 +12,7 @@ flagged
 .ipynb_checkpoints
 __pycache__
 Untitled*
-experiments
+# experiments
 third_party/REKD
 Dockerfile
 hloc/matchers/dedode.py

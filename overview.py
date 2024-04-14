@@ -4,11 +4,10 @@ import os
 import json
 import altair as alt
 
-st.set_page_config(layout="wide", initial_sidebar_state="collapsed", page_title="Moja aplikacja", page_icon=":chart_with_upwards_trend:")
-
+st.set_page_config(layout="wide", initial_sidebar_state="collapsed", page_title="Flight 1 - results", page_icon=":chart_with_upwards_trend:")
 
 def draw_mean_bar_chart(header):
-    st.header('mean '+header)
+    st.header(header[7:])
     df = pd.DataFrame(columns=['matcher', header])
     for matcher in matchers_list:
         matcher_data = pd.read_csv(dataset_path + matcher + ".csv", sep=";")
@@ -27,14 +26,14 @@ def draw_mean_bar_chart(header):
     )
     st.altair_chart(chart, use_container_width=True)
     
-dataset_path = "/mnt/d/Pobrane/dataset_lot1/"
-
-filename_list = os.listdir(dataset_path + "arcgis")
+dataset_path = "./experiments/flight_1/"
+   
+filename_list = os.listdir(dataset_path + "gopro")
 for i, name in enumerate(filename_list):
-    filename_list[i] = int(name[:-4])
+    filename_list[i] = int(name[:-5])
 filename_list = sorted(filename_list)
 
-matchers_list=("loftr", "topicfm", "aspanformer", "dedode", "superpoint+superglue", "superpoint+dualsoftmax", "superpoint+lightglue", "superpoint+mnn", "sift+sgmnet", "sosnet", "hardnet",  "alike",  "r2d2", "darkfeat", "sift", "roma",  "sold2")
+matchers_list=("loftr", "topicfm", "aspanformer", "dedode", "disk", "disk+dualsoftmax", "disk+lightglue", "superpoint+superglue", "superpoint+dualsoftmax", "superpoint+lightglue", "superpoint+mnn", "sift+sgmnet", "sosnet", "hardnet",  "alike",  "r2d2", "darkfeat", "sift", "roma",  "sold2")
 # "disk", "disk+dualsoftmax", , "disk+lightglue","d2net", "rord","lanet","DKMv3", "gluestick",
 
 json_data = pd.DataFrame()
@@ -45,19 +44,19 @@ for filename in filename_list:
         data["file_gopro"] = filename
         json_data = json_data.append(data, ignore_index=True)
     
-
-st.header("yaw angle")
-st.line_chart(json_data, x="file_gopro", y="yaw")
-  
-col1, col2 = st.columns(2)
+st.header('Angles during flight')
+col1, col2, col3 = st.columns(3)
 with col1:
     st.header("resulant_angle angle")
     st.line_chart(json_data, x="file_gopro", y="resulant_angle")
 with col2:
     st.header("resulant_angle_dir")
     st.line_chart(json_data, x="file_gopro", y="resulant_angle_dir")
-
-# altitude_agl / zoom
+with col3:
+    st.header("yaw angle")
+    st.line_chart(json_data, x="file_gopro", y="yaw")
+    
+st.header('altitude_agl / zoom')
 base = alt.Chart(json_data).encode(
     alt.X('file_gopro:Q', scale=alt.Scale(zero=False)))
 
@@ -71,15 +70,17 @@ chart = alt.layer(line1, line2).resolve_scale(y='independent')
 
 st.altair_chart(chart, use_container_width=True)
 
-
-
-draw_mean_bar_chart('ransac_arcgis')
-
-
-
-
+st.header('the mean impact of using yaw trading information for 3 providers')
 col1, col2, col3 = st.columns(3)
-   
+with col1:
+    draw_mean_bar_chart('ransac_arcgis')
+with col2:
+    draw_mean_bar_chart('ransac_google')
+with col3:
+    draw_mean_bar_chart('ransac_geoportal')
+
+st.header('the detailed impact of using yaw trading information for 3 providers')
+col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown("## Arcgis")
 with col2:
@@ -93,9 +94,9 @@ for matcher in matchers_list:
     for i, name in enumerate(data[data.columns[0]]):
         data[data.columns[0]][i] = int(name[:-4])
       
-    col1, col2, col3 = st.columns(3)
     st.header(matcher)
-      
+    col1, col2, col3 = st.columns(3)
+    
     with col1:
         data = data.sort_values(by=[data.columns[0]])
         st.line_chart(data, x="file_gopro", y=["ransac_arcgis", "ransac_rot_arcgis"])
