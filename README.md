@@ -1,21 +1,10 @@
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-
 <p align="center">
-  <h1 align="center"><br><ins>$\color{red}{\textnormal{Image\ Matching\ WebUI}}$
-</ins><br>find matches between 2 images</h1> 
+  <h1 align="center"><br>Image Matching Benchmark</h1> 
 </p>
 
 ## Description
 
-This simple tool efficiently matches image pairs using multiple famous image matching algorithms. The tool features a Graphical User Interface (GUI) designed using [gradio](https://gradio.app/). You can effortlessly select two images and a matching algorithm and obtain a precise matching result.
-**Note**: the images source can be either local images or webcam images.
 
-Here is a demo of the tool:
-
-https://github.com/Vincentqyw/image-matching-webui/assets/18531182/263534692-c3484d1b-cc00-4fdc-9b31-e5b7af07ecd9
 
 The tool currently supports various popular image matching algorithms, namely:
 - [x] [DeDoDe](https://github.com/Parskatt/DeDoDe), 3DV 2024
@@ -51,11 +40,6 @@ The tool currently supports various popular image matching algorithms, namely:
 
 ## How to use
 
-### HuggingFace 
-
-Just try it on HF <a href='https://huggingface.co/spaces/Realcat/image-matching-webui'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue'>  [![Open in OpenXLab](https://cdn-static.openxlab.org.cn/app-center/openxlab_app.svg)](https://openxlab.org.cn/apps/detail/Realcat/image-matching-webui)
-
-or deploy it locally following the instructions below.
 
 ### Requirements
 ``` bash
@@ -65,38 +49,17 @@ conda env create -f environment.yaml
 conda activate imw
 ```
  
-### Run demo
+### Run computation
 ``` bash
-python3 ./app.py
-```
-then open http://localhost:7860 in your browser.
-
-![](assets/gui.jpg)
-
-### Add your own feature / matcher
-
-I provide an example to add local feature in [hloc/extractors/example.py](hloc/extractors/example.py). Then add feature settings in `confs` in file [hloc/extract_features.py](hloc/extract_features.py). Last step is adding some settings to `matcher_zoo` in file [common/utils.py](common/utils.py).
-
-## Contributions welcome!
-
-External contributions are very much welcome. Please follow the [PEP8 style guidelines](https://www.python.org/dev/peps/pep-0008/) using a linter like flake8 (reformat using command `python -m black .`). This is a non-exhaustive list of features that might be valuable additions:
-
-- [x] add webcam support
-- [x] add [line feature matching](https://github.com/Vincentqyw/LineSegmentsDetection) algorithms
-- [x] example to add a new feature extractor / matcher
-- [x] ransac to filter outliers
-- [ ] add [rotation images](https://github.com/pidahbus/deep-image-orientation-angle-detection) options before matching 
-- [ ] support export matches to colmap ([#issue 6](https://github.com/Vincentqyw/image-matching-webui/issues/6))
-- [ ] add config file to set default parameters
-- [ ] dynamically load models and reduce GPU overload
-
-Adding local features / matchers as submodules is very easy. For example, to add the [GlueStick](https://github.com/cvg/GlueStick): 
-
-``` bash
-git submodule add https://github.com/cvg/GlueStick.git third_party/GlueStick
+./matcher_iterator.sh
 ```
 
-If remote submodule repositories are updated, don't forget to pull submodules with `git submodule update --remote`, if you only want to update one submodule, use `git submodule update --remote third_party/GlueStick`.
+### Run graphs
+``` bash
+streamlit run overview.py
+```
+then open http://localhost:8501 in your browser.
+
 
 ## Resources
 - [Image Matching: Local Features & Beyond](https://image-matching-workshop.github.io)
@@ -104,13 +67,4 @@ If remote submodule repositories are updated, don't forget to pull submodules wi
 
 ## Acknowledgement
 
-This code is built based on [Hierarchical-Localization](https://github.com/cvg/Hierarchical-Localization). We express our gratitude to the authors for their valuable source code.
-
-[contributors-shield]: https://img.shields.io/github/contributors/Vincentqyw/image-matching-webui.svg?style=for-the-badge
-[contributors-url]: https://github.com/Vincentqyw/image-matching-webui/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/Vincentqyw/image-matching-webui.svg?style=for-the-badge
-[forks-url]: https://github.com/Vincentqyw/image-matching-webui/network/members
-[stars-shield]: https://img.shields.io/github/stars/Vincentqyw/image-matching-webui.svg?style=for-the-badge
-[stars-url]: https://github.com/Vincentqyw/image-matching-webui/stargazers
-[issues-shield]: https://img.shields.io/github/issues/Vincentqyw/image-matching-webui.svg?style=for-the-badge
-[issues-url]: https://github.com/Vincentqyw/image-matching-webui/issues
+This code is built based on [Image Matching WebUI](https://github.com/Vincentqyw/image-matching-webui). 
