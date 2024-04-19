@@ -54,7 +54,7 @@ for matcher in matchers:
                                 inliers_rot_count=data['ransac_rot_'+provider][i],
                                 processing_time=data['time_'+provider][i],
                                 file_gopro=data['file_gopro'][i],
-                                resulant_angle=group_angle(json_data['resulant_angle']) 
+                                resultant_angle=group_angle(json_data['resultant_angle']) 
                                 ))
 
 df = pd.DataFrame(results)
@@ -66,7 +66,7 @@ st.pyplot(plt.gcf())
 
 st.header('The number of correct points for each algorithm grouped by angle of rotation (deg)')
 column_order = ['0-5', '5-10', '10-15', '15-20', '>20']
-_df = df.pivot_table(index='matcher', columns='resulant_angle', values='inliers_count', aggfunc='median')
+_df = df.pivot_table(index='matcher', columns='resultant_angle', values='inliers_count', aggfunc='median')
 _df = _df.reindex(column_order, axis=1)
 _df.iloc[::-1].plot.barh(width=0.8)
 st.pyplot(plt.gcf())
@@ -76,19 +76,21 @@ _df = pd.DataFrame({'matcher': matchers, 'inliers_count': df.groupby('matcher')[
 _df.iloc[::-1].plot.barh(width=0.8)
 st.pyplot(plt.gcf())
 
-plt.figure(figsize=(20,6))
-sns.violinplot(data=df, x="matcher", y="inliers_count", hue="provider")
+plt.figure(figsize=(20,36))
+sns.violinplot(data=df, x="inliers_count", y="matcher", cut=0, density_norm="width")
 st.pyplot(plt.gcf())
 
-plt.figure(figsize=(20,6))
-sns.violinplot(data=df, x="matcher", y="processing_time", hue="provider")
+df['matcher'] = df['matcher'].str.replace('+','+\n')
+plt.figure(figsize=(25,6))
+sns.violinplot(data=df, x="matcher", y="processing_time", hue="provider", cut=0, density_norm="width")
+plt.yscale('log')
 st.pyplot(plt.gcf())
 
-plt.figure(figsize=(10,6))
-sns.violinplot(data=df, y="inliers_count", x="matcher")
+plt.figure(figsize=(25,6))
+sns.violinplot(data=df, x="matcher", y="inliers_count", cut=0, density_norm="width")
 st.pyplot(plt.gcf())
 
-plt.figure(figsize=(20,6))
+plt.figure(figsize=(25,6))
 sns.scatterplot(data=df, x='matcher',y='inliers_count', hue=df['provider'])
 st.pyplot(plt.gcf())
 
@@ -106,26 +108,26 @@ plt.figure(figsize=(20,6))
 sns.scatterplot(data=df_agg, x='processing_time',y='inliers_count',size='count', hue=df_agg['matcher'])
 st.pyplot(plt.gcf())
 
-plt.figure(figsize=(20,8))
-sns.violinplot(data=df, x="matcher", y="inliers_count")
+plt.figure(figsize=(25,6))
+sns.violinplot(data=df, x="matcher", y="inliers_count", cut=0, density_norm="width")
 st.pyplot(plt.gcf())
 
-plt.figure(figsize=(20,8))
-sns.violinplot(data=df_agg, x="matcher", y="inliers_count")
+plt.figure(figsize=(25,16))
+sns.violinplot(data=df_agg, x="matcher", y="inliers_count", density_norm="width")
 st.pyplot(plt.gcf())
 
 st.header('violinplot - inliers_count vs provider') 
 plt.figure(figsize=(20,8))
-sns.violinplot(data=df, x="provider", y="inliers_count")
+sns.violinplot(data=df, x="provider", y="inliers_count", cut=0, density_norm="width")
 st.pyplot(plt.gcf())
 
 st.header('violinplot - inliers_count vs provider with aggregation by provider') 
-plt.figure(figsize=(20,8))
-sns.violinplot(data=df_agg, x="provider", y="inliers_count")
+plt.figure(figsize=(20,10))
+sns.violinplot(data=df_agg, x="provider", y="inliers_count", cut=0, density_norm="width")
 st.pyplot(plt.gcf())
 
 plt.figure(figsize=(20,18))
-sns.violinplot(data=df_agg, x="inliers_count", y="matcher")
+sns.violinplot(data=df_agg, x="inliers_count", y="matcher", density_norm="width")
 st.pyplot(plt.gcf())
 
 plt.figure(figsize=(20,8))

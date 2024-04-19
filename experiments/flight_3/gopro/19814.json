@@ -1,9 +1,1 @@
-{
-  "lat": 50.0916369651776,
-  "lon": 22.0276634545573,
-  "altitude_agl": 162.31,
-  "zoom": 20,
-  "yaw": 301.8,
-  "resulant_angle": 5.6,
-  "resulant_angle_dir": -171.63
-}
+{"lat": 50.0916369651776, "lon": 22.0276634545573, "altitude_agl": 162.31, "zoom": 20, "yaw": 301.8, "resultant_angle": 5.6, "resultant_angle_dir": -171.63}

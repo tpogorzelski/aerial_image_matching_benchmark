@@ -1,9 +1,9 @@
 <p align="center">
-  <h1 align="center"><br>Image Matching Benchmark</h1> 
+  <h1 align="center"><br>Aerial Image Matching Benchmark</h1> 
 </p>
 
 ## Description
-
+This tool compares many well-known image matching algorithms (implemented [here](https://github.com/Vincentqyw/image-matching-webui#image-matching-webuifind-matches-between-2-images)) in an automated manner. As a result of the work of this tool, a website is generated showing charts that can help you choose a specific algorithm for your goals. The repository also contains a set of aeronautical data for which tests have been performed.
 
 
 The tool currently supports various popular image matching algorithms, namely:
@@ -43,12 +43,18 @@ The tool currently supports various popular image matching algorithms, namely:
 
 ### Requirements
 ``` bash
-git clone --recursive https://github.com/Vincentqyw/image-matching-webui.git
-cd image-matching-webui
+git clone --recursive https://github.com/tpogorzelski/aerial_image_matching_benchmark.git
+cd aerial_image_matching_benchmark
 conda env create -f environment.yaml
 conda activate imw
 ```
- 
+
+### Configure script
+``` bash
+dataset_path="path/to/dataset"
+matchers_list=("loftr" "topicfm" "aspanformer")
+```
+
 ### Run computation
 ``` bash
 ./matcher_iterator.sh
