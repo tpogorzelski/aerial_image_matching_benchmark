@@ -1,12 +1,13 @@
-import torch
-import warnings
-from ..utils.base_model import BaseModel
 import sys
 from pathlib import Path
 
+import torch
+
+from ..utils.base_model import BaseModel
+
 sys.path.append(str(Path(__file__).parent / "../../third_party"))
-from TopicFM.src.models.topic_fm import TopicFM as _TopicFM
 from TopicFM.src import get_model_cfg
+from TopicFM.src.models.topic_fm import TopicFM as _TopicFM
 
 topicfm_path = Path(__file__).parent / "../../third_party/TopicFM"
 
@@ -16,6 +17,7 @@ class TopicFM(BaseModel):
         "weights": "outdoor",
         "match_threshold": 0.2,
         "n_sampling_topics": 4,
+        "max_keypoints": -1,
     }
     required_inputs = ["image0", "image1"]
 
@@ -39,4 +41,14 @@ class TopicFM(BaseModel):
             "keypoints1": data_["mkpts1_f"],
             "mconf": data_["mconf"],
         }
+        scores = data_["mconf"]
+        top_k = self.conf["max_keypoints"]
+        if top_k is not None and len(scores) > top_k:
+            keep = torch.argsort(scores, descending=True)[:top_k]
+            scores = scores[keep]
+            pred["keypoints0"], pred["keypoints1"], pred["mconf"] = (
+                pred["keypoints0"][keep],
+                pred["keypoints1"][keep],
+                scores,
+            )
         return pred

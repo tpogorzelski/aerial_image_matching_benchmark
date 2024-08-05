@@ -1,20 +1,24 @@
+import subprocess
 import sys
 from pathlib import Path
-import subprocess
+
 import torch
+from huggingface_hub import hf_hub_download
+
+from hloc import logger
 
 from ..utils.base_model import BaseModel
-from .. import logger
 
-rord_path = Path(__file__).parent / "../../third_party/RoRD"
+rord_path = Path(__file__).parent / "../../third_party"
 sys.path.append(str(rord_path))
-from lib.model_test import D2Net as _RoRD
-from lib.pyramid import process_multiscale
+from RoRD.lib.model_test import D2Net as _RoRD
+from RoRD.lib.pyramid import process_multiscale
+
 
 class RoRD(BaseModel):
     default_conf = {
         "model_name": "rord.pth",
-        "checkpoint_dir": rord_path / "models",
+        "checkpoint_dir": rord_path / "RoRD" / "models",
         "use_relu": True,
         "multiscale": False,
         "max_keypoints": 1024,
@@ -27,27 +31,28 @@ class RoRD(BaseModel):
 
     def _init(self, conf):
         model_path = conf["checkpoint_dir"] / conf["model_name"]
-        link = self.weight_urls[conf["model_name"]]
+        link = self.weight_urls[conf["model_name"]]  # noqa: F841
+
         if not model_path.exists():
             model_path.parent.mkdir(exist_ok=True)
-            cmd_wo_proxy = ["gdown", link, "-O", str(model_path)]
-            cmd = ["gdown", link, "-O", str(model_path), "--proxy", self.proxy]
-            logger.info(
-                f"Downloading the RoRD model with `{cmd_wo_proxy}`."
+            cached_file_0 = hf_hub_download(
+                repo_type="space",
+                repo_id="Realcat/image-matching-webui",
+                filename="third_party/RoRD/models/d2net.pth",
             )
-            try:
-                subprocess.run(cmd_wo_proxy, check=True)
-            except subprocess.CalledProcessError as e:
-                logger.info(f"Downloading the RoRD model with `{cmd}`.")
-                try:
-                    subprocess.run(cmd, check=True)
-                except subprocess.CalledProcessError as e:
-                    logger.error(f"Failed to download the RoRD model.")
-                    raise e
-        logger.info("RoRD model loaded.")
+            cached_file_1 = hf_hub_download(
+                repo_type="space",
+                repo_id="Realcat/image-matching-webui",
+                filename="third_party/RoRD/models/rord.pth",
+            )
+
+            subprocess.run(["cp", cached_file_0, model_path], check=True)
+            subprocess.run(["cp", cached_file_1, model_path], check=True)
+
         self.net = _RoRD(
             model_file=model_path, use_relu=conf["use_relu"], use_cuda=False
         )
+        logger.info("Load RoRD model done.")
 
     def _forward(self, data):
         image = data["image"]

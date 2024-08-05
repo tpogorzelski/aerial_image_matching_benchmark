@@ -1,14 +1,13 @@
 name: imw
 channels:
-  # - https://dx-mirrors.sensetime.com/anaconda/cloud/pytorch
   - pytorch
   - conda-forge
   - defaults
 dependencies:
-  - python=3.10.4
-  - cudatoolkit=11.3
-  - pytorch=1.12.1
-  - torchvision=0.13.1
+  - python=3.10.10
+  - cudatoolkit=12.1
+  - pytorch=2.2.1
+  - torchvision=0.17.1
   - torchmetrics=0.6.0
   - pytorch-lightning=1.4.9
   - pip

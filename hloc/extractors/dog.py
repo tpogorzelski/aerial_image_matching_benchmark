@@ -1,14 +1,13 @@
 import kornia
-from kornia.feature.laf import (
-    laf_from_center_scale_ori,
-    extract_patches_from_pyramid,
-)
 import numpy as np
-import torch
 import pycolmap
+import torch
+from kornia.feature.laf import (
+    extract_patches_from_pyramid,
+    laf_from_center_scale_ori,
+)
 
 from ..utils.base_model import BaseModel
-
 
 EPS = 1e-6
 
@@ -75,11 +74,7 @@ class DoG(BaseModel):
                 options=pycolmap.SiftExtractionOptions(options),
                 device=getattr(pycolmap.Device, "cuda" if use_gpu else "cpu"),
             )
-        pred = self.sift.extract(image_np)
-        if len(pred) == 2:
-            keypoints, descriptors = pred
-        elif len(pred) == 3:
-            keypoints, scores, descriptors = pred
+        keypoints, descriptors = self.sift.extract(image_np)
         scales = keypoints[:, 2]
         oris = np.rad2deg(keypoints[:, 3])
 

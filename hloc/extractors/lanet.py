@@ -1,13 +1,19 @@
+import subprocess
 import sys
 from pathlib import Path
+
 import torch
-import subprocess
-from hloc import logger, checkpoints_hub
+from huggingface_hub import hf_hub_download
+
+from hloc import logger
+
 from ..utils.base_model import BaseModel
 
+lib_path = Path(__file__).parent / "../../third_party"
+sys.path.append(str(lib_path))
+from lanet.network_v0.model import PointModel
+
 lanet_path = Path(__file__).parent / "../../third_party/lanet"
-sys.path.append(str(lanet_path))
-from network_v0.model import PointModel
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -26,21 +32,22 @@ class LANet(BaseModel):
         )
         if not model_path.exists():
             logger.warning(f"No model found at {model_path}, start downloading")
-            model_link = "{}/lanet/checkpoints/{}".format(
-                checkpoints_hub, f'PointModel_{conf["model_name"]}.pth'
-            )
             model_path.parent.mkdir(exist_ok=True)
-            cmd = [
-                "wget",
-                model_link,
-                "-O",
-                str(model_path),
-            ]
+            cached_file = hf_hub_download(
+                repo_type="space",
+                repo_id="Realcat/image-matching-webui",
+                filename="third_party/lanet/checkpoints/PointModel_{}.pth".format(
+                    conf["model_name"]
+                ),
+            )
+            cmd = ["cp", str(cached_file), str(model_path.parent)]
+            logger.info(f"copy model file `{cmd}`.")
             subprocess.run(cmd, check=True)
 
         self.net = PointModel(is_test=True)
         state_dict = torch.load(model_path, map_location="cpu")
         self.net.load_state_dict(state_dict["model_state"])
+        logger.info("Load LANet model done.")
 
     def _forward(self, data):
         image = data["image"]

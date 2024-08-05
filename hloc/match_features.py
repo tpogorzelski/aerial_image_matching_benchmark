@@ -1,18 +1,19 @@
 import argparse
-from typing import Union, Optional, Dict, List, Tuple
-from pathlib import Path
 import pprint
+from functools import partial
+from pathlib import Path
 from queue import Queue
 from threading import Thread
-from functools import partial
-from tqdm import tqdm
-import h5py
-import torch
+from typing import Dict, List, Optional, Tuple, Union
 
-from . import matchers, logger
+import h5py
+import numpy as np
+import torch
+from tqdm import tqdm
+
+from . import logger, matchers
 from .utils.base_model import dynamic_load
 from .utils.parsers import names_to_pair, names_to_pair_old, parse_retrieval
-import numpy as np
 
 """
 A set of standard configurations that can be directly selected from the command
@@ -63,7 +64,7 @@ confs = {
         },
     },
     "disk-lightglue": {
-        "output": "matches-lightglue",
+        "output": "matches-disk-lightglue",
         "model": {
             "name": "lightglue",
             "match_threshold": 0.2,
@@ -71,6 +72,24 @@ confs = {
             "depth_confidence": 0.95,  # for early stopping,
             "features": "disk",
             "model_name": "disk_lightglue.pth",
+        },
+        "preprocessing": {
+            "grayscale": True,
+            "resize_max": 1024,
+            "dfactor": 8,
+            "force_resize": False,
+        },
+    },
+    "sift-lightglue": {
+        "output": "matches-sift-lightglue",
+        "model": {
+            "name": "lightglue",
+            "match_threshold": 0.2,
+            "width_confidence": 0.99,  # for point pruning
+            "depth_confidence": 0.95,  # for early stopping,
+            "features": "sift",
+            "add_scale_ori": True,
+            "model_name": "sift_lightglue.pth",
         },
         "preprocessing": {
             "grayscale": True,
@@ -133,14 +152,21 @@ confs = {
         "output": "matches-Dual-Softmax",
         "model": {
             "name": "dual_softmax",
-            "do_mutual_check": True,
-            "match_threshold": 0.2,  # TODO
+            "match_threshold": 0.01,
+            "inv_temperature": 20,
         },
     },
     "adalam": {
         "output": "matches-adalam",
         "model": {
             "name": "adalam",
+            "match_threshold": 0.2,
+        },
+    },
+    "imp": {
+        "output": "matches-imp",
+        "model": {
+            "name": "imp",
             "match_threshold": 0.2,
         },
     },
@@ -339,19 +365,25 @@ def match_images(model, feat0, feat1):
         feat0["keypoints"] = feat0["keypoints"][0][None]
     if isinstance(feat1["keypoints"], list):
         feat1["keypoints"] = feat1["keypoints"][0][None]
-
-    pred = model(
-        {
-            "image0": feat0["image"],
-            "keypoints0": feat0["keypoints"],
-            "scores0": feat0["scores"][0].unsqueeze(0),
-            "descriptors0": desc0,
-            "image1": feat1["image"],
-            "keypoints1": feat1["keypoints"],
-            "scores1": feat1["scores"][0].unsqueeze(0),
-            "descriptors1": desc1,
-        }
-    )
+    input_dict = {
+        "image0": feat0["image"],
+        "keypoints0": feat0["keypoints"],
+        "scores0": feat0["scores"][0].unsqueeze(0),
+        "descriptors0": desc0,
+        "image1": feat1["image"],
+        "keypoints1": feat1["keypoints"],
+        "scores1": feat1["scores"][0].unsqueeze(0),
+        "descriptors1": desc1,
+    }
+    if "scales" in feat0:
+        input_dict = {**input_dict, "scales0": feat0["scales"]}
+    if "scales" in feat1:
+        input_dict = {**input_dict, "scales1": feat1["scales"]}
+    if "oris" in feat0:
+        input_dict = {**input_dict, "oris0": feat0["oris"]}
+    if "oris" in feat1:
+        input_dict = {**input_dict, "oris1": feat1["oris"]}
+    pred = model(input_dict)
     pred = {
         k: v.cpu().detach()[0] if isinstance(v, torch.Tensor) else v
         for k, v in pred.items()
@@ -378,11 +410,15 @@ def match_images(model, feat0, feat1):
     ret = {
         "image0_orig": feat0["image_orig"],
         "image1_orig": feat1["image_orig"],
-        "keypoints0": kpts0_origin.numpy(),
-        "keypoints1": kpts1_origin.numpy(),
-        "keypoints0_orig": mkpts0_origin.numpy(),
-        "keypoints1_orig": mkpts1_origin.numpy(),
-        "mconf": mconfid,
+        "keypoints0": kpts0,
+        "keypoints1": kpts1,
+        "keypoints0_orig": kpts0_origin.numpy(),
+        "keypoints1_orig": kpts1_origin.numpy(),
+        "mkeypoints0": mkpts0,
+        "mkeypoints1": mkpts1,
+        "mkeypoints0_orig": mkpts0_origin.numpy(),
+        "mkeypoints1_orig": mkpts1_origin.numpy(),
+        "mconf": mconfid.numpy(),
     }
     del feat0, feat1, desc0, desc1, kpts0, kpts1, kpts0_origin, kpts1_origin
     torch.cuda.empty_cache()

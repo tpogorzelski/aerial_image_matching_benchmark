@@ -1,16 +1,18 @@
 import sys
 from pathlib import Path
-import subprocess
-import torch
-from .. import logger
 
+import torch
+
+from .. import logger
 from ..utils.base_model import BaseModel
 
 example_path = Path(__file__).parent / "../../third_party/example"
 sys.path.append(str(example_path))
 
 # import some modules here
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class Example(BaseModel):
     # change to your default configs
@@ -33,7 +35,7 @@ class Example(BaseModel):
         # self.net = ExampleNet(is_test=True)
         state_dict = torch.load(model_path, map_location="cpu")
         self.net.load_state_dict(state_dict["model_state"])
-        logger.info(f"Load example model done.")
+        logger.info("Load example model done.")
 
     def _forward(self, data):
         # data: dict, keys: 'image'

@@ -1,12 +1,13 @@
-import sys
-from pathlib import Path
 import subprocess
-import torch
-from PIL import Image
+import sys
 from collections import OrderedDict, namedtuple
-from ..utils.base_model import BaseModel
-from ..utils import do_system
+from pathlib import Path
+
+import torch
+from huggingface_hub import hf_hub_download
+
 from .. import logger
+from ..utils.base_model import BaseModel
 
 sgmnet_path = Path(__file__).parent / "../../third_party/SGMNet"
 sys.path.append(str(sgmnet_path))
@@ -46,35 +47,16 @@ class SGMNet(BaseModel):
     def _init(self, conf):
         sgmnet_weights = sgmnet_path / "weights/sgm/root" / conf["model_name"]
 
-        link = self.weight_urls[conf["model_name"]]
-        tar_path = sgmnet_path / "weights.tar.gz"
         # Download the model.
         if not sgmnet_weights.exists():
-            if not tar_path.exists():
-                cmd = [
-                    "gdown",
-                    link,
-                    "-O",
-                    str(tar_path),
-                    "--proxy",
-                    self.proxy,
-                ]
-                cmd_wo_proxy = ["gdown", link, "-O", str(tar_path)]
-                logger.info(
-                    f"Downloading the SGMNet model with `{cmd_wo_proxy}`."
-                )
-                try:
-                    subprocess.run(cmd_wo_proxy, check=True)
-                except subprocess.CalledProcessError as e:
-                    logger.info(f"Downloading the SGMNet model with `{cmd}`.")
-                    try:
-                        subprocess.run(cmd, check=True)
-                    except subprocess.CalledProcessError as e:
-                        logger.error(f"Failed to download the SGMNet model.")
-                        raise e
-            cmd = [f"cd {str(sgmnet_path)} & tar -xvf", str(tar_path)]
+            cached_file = hf_hub_download(
+                repo_type="space",
+                repo_id="Realcat/image-matching-webui",
+                filename="third_party/SGMNet/weights.tar.gz",
+            )
+            cmd = ["tar", "-xvf", str(cached_file), "-C", str(sgmnet_path)]
             logger.info(f"Unzip model file `{cmd}`.")
-            do_system(f"cd {str(sgmnet_path)} & tar -xvf {str(tar_path)}")
+            subprocess.run(cmd, check=True)
 
         # config
         config = namedtuple("config", conf.keys())(*conf.values())
@@ -90,7 +72,7 @@ class SGMNet(BaseModel):
                 new_stat_dict[key[7:]] = value
             checkpoint["state_dict"] = new_stat_dict
         self.net.load_state_dict(checkpoint["state_dict"])
-        logger.info(f"Load SGMNet model done.")
+        logger.info("Load SGMNet model done.")
 
     def _forward(self, data):
         x1 = data["keypoints0"].squeeze()  # N x 2
@@ -99,8 +81,12 @@ class SGMNet(BaseModel):
         score2 = data["scores1"].reshape(-1, 1)
         desc1 = data["descriptors0"].permute(0, 2, 1)  # 1 x N x 128
         desc2 = data["descriptors1"].permute(0, 2, 1)
-        size1 = torch.tensor(data["image0"].shape[2:]).flip(0)  # W x H -> x & y
-        size2 = torch.tensor(data["image1"].shape[2:]).flip(0)  # W x H
+        size1 = (
+            torch.tensor(data["image0"].shape[2:]).flip(0).to(x1.device)
+        )  # W x H -> x & y
+        size2 = (
+            torch.tensor(data["image1"].shape[2:]).flip(0).to(x2.device)
+        )  # W x H
         norm_x1 = self.normalize_size(x1, size1)
         norm_x2 = self.normalize_size(x2, size2)
 

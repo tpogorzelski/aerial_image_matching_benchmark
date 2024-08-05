@@ -1,6 +1,9 @@
 import sys
 from pathlib import Path
+
 import torch
+
+from hloc import logger
 
 from ..utils.base_model import BaseModel
 
@@ -33,6 +36,7 @@ class Alike(BaseModel):
             scores_th=conf["detection_threshold"],
             n_limit=conf["max_keypoints"],
         )
+        logger.info("Load Alike model done.")
 
     def _forward(self, data):
         image = data["image"]

@@ -1,21 +1,22 @@
 import argparse
-import torch
-from pathlib import Path
-from typing import Dict, List, Union, Optional
-import h5py
-from types import SimpleNamespace
-import cv2
-import numpy as np
-from tqdm import tqdm
-import pprint
 import collections.abc as collections
+import pprint
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Dict, List, Optional, Union
+
+import cv2
+import h5py
+import numpy as np
 import PIL.Image
+import torch
 import torchvision.transforms.functional as F
+from tqdm import tqdm
+
 from . import extractors, logger
 from .utils.base_model import dynamic_load
+from .utils.io import list_h5_names, read_image
 from .utils.parsers import parse_image_lists
-from .utils.io import read_image, list_h5_names
-
 
 """
 A set of standard configurations that can be directly selected from the command
@@ -131,6 +132,7 @@ confs = {
         "output": "feats-rootsift-n5000-r1600",
         "model": {
             "name": "dog",
+            "descriptor": "rootsift",
             "max_keypoints": 5000,
         },
         "preprocessing": {
@@ -145,8 +147,8 @@ confs = {
     "sift": {
         "output": "feats-sift-n5000-r1600",
         "model": {
-            "name": "dog",
-            "descriptor": "sift",
+            "name": "sift",
+            "rootsift": True,
             "max_keypoints": 5000,
         },
         "preprocessing": {
@@ -194,6 +196,17 @@ confs = {
         "output": "feats-disk-n5000-r1600",
         "model": {
             "name": "disk",
+            "max_keypoints": 5000,
+        },
+        "preprocessing": {
+            "grayscale": False,
+            "resize_max": 1600,
+        },
+    },
+    "xfeat": {
+        "output": "feats-xfeat-n5000-r1600",
+        "model": {
+            "name": "xfeat",
             "max_keypoints": 5000,
         },
         "preprocessing": {
@@ -278,6 +291,23 @@ confs = {
             "dfactor": 8,
         },
     },
+    "sfd2": {
+        "output": "feats-sfd2-n4096-r1600",
+        "model": {
+            "name": "sfd2",
+            "max_keypoints": 4096,
+        },
+        "preprocessing": {
+            "grayscale": False,
+            "force_resize": True,
+            "resize_max": 1600,
+            "width": 640,
+            "height": 480,
+            "conf_th": 0.001,
+            "multiscale": False,
+            "scales": [1.0],
+        },
+    },
     # Global descriptors
     "dir": {
         "output": "global-feats-dir",
@@ -297,6 +327,11 @@ confs = {
     "cosplace": {
         "output": "global-feats-cosplace",
         "model": {"name": "cosplace"},
+        "preprocessing": {"resize_max": 1024},
+    },
+    "eigenplaces": {
+        "output": "global-feats-eigenplaces",
+        "model": {"name": "eigenplaces"},
         "preprocessing": {"resize_max": 1024},
     },
 }
@@ -448,7 +483,7 @@ def extract(model, image_0, conf):
     #     image0 = image_0[:, :, ::-1]  # BGR to RGB
     data = preprocess(image0, conf)
     pred = model({"image": data["image"]})
-    pred["image_size"] = original_size = data["original_size"]
+    pred["image_size"] = data["original_size"]
     pred = {**pred, **data}
     return pred
 

@@ -1,29 +1,31 @@
 import argparse
-import sqlite3
-from tqdm import tqdm
-from collections import defaultdict
-import numpy as np
-from pathlib import Path
 import logging
+import sqlite3
+from collections import defaultdict
+from pathlib import Path
+
+import numpy as np
+from tqdm import tqdm
 
 from ...colmap_from_nvm import (
-    recover_database_images_and_ids,
     camera_center_to_translation,
+    recover_database_images_and_ids,
 )
-from ...utils.read_write_model import Camera, Image, Point3D, CAMERA_MODEL_IDS
-from ...utils.read_write_model import write_model
+from ...utils.read_write_model import (
+    CAMERA_MODEL_IDS,
+    Camera,
+    Image,
+    Point3D,
+    write_model,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def read_nvm_model(
-    nvm_path, database_path, image_ids, camera_ids, skip_points=False
-):
+def read_nvm_model(nvm_path, database_path, image_ids, camera_ids, skip_points=False):
     # Extract the intrinsics from the db file instead of the NVM model
     db = sqlite3.connect(str(database_path))
-    ret = db.execute(
-        "SELECT camera_id, model, width, height, params FROM cameras;"
-    )
+    ret = db.execute("SELECT camera_id, model, width, height, params FROM cameras;")
     cameras = {}
     for camera_id, camera_model, width, height, params in ret:
         params = np.fromstring(params, dtype=np.double).reshape(-1)
