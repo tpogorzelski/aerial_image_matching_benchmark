@@ -4,8 +4,13 @@ if [ ! -d "third_party/SGMNet/weights" ]; then
     tar -xzf third_party/SGMNet/weights.tar.gz -C third_party/SGMNet
 fi
 
-dataset_path="/path/to/dataset"
-matchers_list=("loftr" "topicfm" "aspanformer" "dedode" "superpoint+superglue" "superpoint+lightglue" "disk" "disk+dualsoftmax" "superpoint+dualsoftmax" "disk+lightglue" "superpoint+mnn" "sift+sgmnet" "sosnet" "hardnet" "d2net" "rord" "alike" "lanet" "r2d2" "darkfeat" "sift" "roma" "DKMv3" "gluestick" "sold2")
+# dataset_path="/path/to/dataset"
+dataset_path="/mnt/e/Czajka_dataset/20230927_1"
+matchers_list=("LoFTR" "TopicFM" "AspanFormer" "DeDoDe" "SuperPoint+SuperGlue" "SuperPoint+LightGlue" "DISK" "DISK+dualsoftmax" "superpoint+dualsoftmax" "DISK+LightGlue" "SuperPoint+MNN" "SIFT+SGMNet" "SOSNet" "HardNet" "D2Net" "RORD" "ALIKE" "LANET" "R2D2" "DARKFeat" "SIFT" "ROMA" "DKMv3" "GlueStick" "SOLD2")
+
+# fail_cuda=("d2net" "rord" "lanet" "DKMv3")
+
+matchers_list=("aspanformer")
 
 for matcher in "${matchers_list[@]}"; do
     echo "$matcher"

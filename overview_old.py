@@ -1,4 +1,3 @@
-import streamlit as st
 import pandas as pd
 import os
 import json
@@ -7,255 +6,125 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import random
+import cv2
+from math import *
+import requests
 
-st.set_page_config(layout="wide", initial_sidebar_state="collapsed", page_title="Flight 1 - results", page_icon=":chart_with_upwards_trend:")
+def latlon2relativeXY(lat, lon):
+    x = (lon + 180) / 360
+    y = (1 - log(tan(radians(lat)) + sec(radians(lat))) / pi) / 2
+    return(x,y)
 
-pages = ["Flight 1", "Flight 2", "Flight 3"]
-page = st.sidebar.selectbox("Wybierz stronę", pages)
+def latlon2tiles_float(lat, lon, z):
+    n = numTiles(z) 
+    x,y = latlon2relativeXY(lat,lon)
+    return [n*x, n*y]
 
-if page == "Flight 1":
-    st.header("Flight 1, altitude: 500m")
-    dataset_path = "./experiments/flight_1/"
-elif page == "Flight 2":
-    st.header("Flight 2, altitude: 1500m")
-    dataset_path = "./experiments/flight_2/"
-elif page == "Flight 3":
-    st.header("Flight 3, altitude: 1500m")
-    dataset_path = "./experiments/flight_3/"
+def sec(x):
+    return(1/cos(x))
 
-matchers=("loftr", "topicfm", "aspanformer", "dedode", "disk", "disk+dualsoftmax", "disk+lightglue", "superpoint+superglue", "superpoint+dualsoftmax", "superpoint+lightglue", "superpoint+mnn", "sift+sgmnet", "sosnet", "hardnet",  "alike",  "r2d2", "darkfeat", "sift", "roma",  "sold2")
-list_providers = ['arcgis', 'google', 'geoportal']
+def numTiles(z):
+    return(pow(2,z))
 
-results = []
-for matcher in matchers:
-    data = pd.read_csv(dataset_path + matcher + ".csv", sep=";")
-    for provider in list_providers:
-        for i in range(len(data)):
-            results.append(dict(matcher=matcher.replace('+', '+\n'),
-                                provider=provider,
-                                inliers_count=data['ransac_'+provider][i],
-                                processing_time=data['time_'+provider][i]))
+def zoomFromAGL(agl):
+    if agl < 0:
+        print(f"ERROR: Altitude {agl} is below 0")
+        exit()
+    
+    zoom = round(32*agl**(-0.11))
+    
+    if zoom > 20: #the highest value of ArcGIS maps in Rzeszów area
+        zoom = 20
+
+    return zoom 
+
+def get_tile(z, x, y):
+     
+    url = f'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    
+    while True:
+        response = requests.get(url)
+        response.raise_for_status()  
+
+        if response.content is not None:
+            image = np.asarray(bytearray(response.content), dtype="uint8")
+            image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+            return image
+
+def concat_tile(im_list_2d):
+    return cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in im_list_2d])
+
+def map_from_center_tile(zoom, map_center_tile):
+    tile_matrix = []
+
+    x, y = map_center_tile
+    map_center_tile = [round(x), round(y)]
+    
+    for y in range(map_center_tile[1]-3, map_center_tile[1]+4):         #oś y
+        tile_matrix.append([])
+
+        for x in range(map_center_tile[0]-3, map_center_tile[0]+4):     #oś x
             
-df = pd.DataFrame(results)
-
-
-
-aggregated = []
-for (matcher,provider), g in df.groupby(['matcher','provider']):
-    aggregated.append(dict(matcher=matcher,
-                           provider=provider,
-                           inliers_count=g.inliers_count.mean(),
-                           processing_time=g.processing_time.mean(),
-                           count=len(g)))
-
-df_agg = pd.DataFrame(aggregated)
-
-
-
-
-filename_list = os.listdir(dataset_path + "gopro")
-for i, name in enumerate(filename_list):
-    filename_list[i] = int(name[:-5])
-filename_list = sorted(filename_list)
-
-def draw_mean_bar_chart(header):
-    st.header(header[7:])
-    df = pd.DataFrame(columns=['matcher', header])
-    for matcher in matchers:
-        matcher_data = pd.read_csv(dataset_path + matcher + ".csv", sep=";")
-        mean = matcher_data['ransac_arcgis'].mean()
-        mean_rot = matcher_data['ransac_rot_arcgis'].mean()
+            print(f'Try to download {x}, {y}, {z} tile')
+            tile = get_tile(zoom, x, y) #TODO: zmienić 'Rzeszów' na zmienną
+            
+            tile_matrix[y - (map_center_tile[1] - 3)].append(tile)
         
-        new_row = pd.DataFrame({'matcher': [matcher], 'mean': [mean], 'mean_rot': [mean_rot]})
-        df = pd.concat([df, new_row], ignore_index=True)
-
-    df_melt = df.melt('matcher', var_name='a', value_name='b')
-
-    chart = alt.Chart(df_melt).mark_bar().encode(
-        x='b:Q',
-        y='matcher:N',
-        color='a:N',
-        tooltip=['a', 'b']
-    )
-    st.altair_chart(chart, use_container_width=True)
+    map_7x7 = concat_tile(tile_matrix)
     
+    return map_7x7
 
-st.header('the mean impact of using yaw trading information for 3 providers')
-col1, col2, col3 = st.columns(3)
-with col1:
-    draw_mean_bar_chart('ransac_arcgis')
-with col2:
-    draw_mean_bar_chart('ransac_google')
-with col3:
-    draw_mean_bar_chart('ransac_geoportal')
-   
+def overlay_images(background, image):
 
-
-
-json_data = pd.DataFrame()
-
-for filename in filename_list:
-    with open(dataset_path + "gopro/" + str(filename) + '.json', 'r') as file:
-        data = json.load(file)
-        data["file_gopro"] = filename
-        data_df = pd.DataFrame([data]) 
-        json_data = pd.concat([json_data, data_df], ignore_index=True)
+    h, w, z = background.shape
+    h2, w2, z2 = image.shape
     
-st.header('Angles during flight')
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.header("resulant_angle angle")
-    st.line_chart(json_data, x="file_gopro", y="resulant_angle")
-with col2:
-    st.header("resulant_angle_dir")
-    st.line_chart(json_data, x="file_gopro", y="resulant_angle_dir")
-with col3:
-    st.header("yaw angle")
-    st.line_chart(json_data, x="file_gopro", y="yaw")
+    mask = np.where(image > 0, 255, 0)
+    mask = cv2.convertScaleAbs(mask)
+
+    background = cv2.subtract(background, mask[:, :, :3])
+
+    return cv2.add(background, image)
     
-st.header('altitude_agl / zoom')
-base = alt.Chart(json_data).encode(
-    alt.X('file_gopro:Q', scale=alt.Scale(zero=False)))
+altitudes = [150, 500, 1500]
+matchers=("LoFTR", "TopicFM", "AspanFormer", "DeDoDe", "SuperPoint+SuperGlue", "SuperPoint+LightGlue", "DISK", "DISK+DualSoftmax", "SuperPoint+DualSoftmax", "DISK+LightGlue", "SuperPoint+MNN", "SIFT+SGMNet", "SOSNet", "HardNet", "D2Net", "RORD", "ALIKE", "LANET", "R2D2", "DARKFeat", "SIFT", "ROMA", "DKMv3", "GlueStick", "SOLD2")
 
-line1 = base.mark_line(color='lightblue').encode(
-    alt.Y('zoom:Q', axis=alt.Axis(title='zoom', titleColor='lightblue')))
-
-line2 = base.mark_line(color='lightblue').encode(
-    alt.Y('altitude_agl:Q', axis=alt.Axis(title='altitude_agl', titleColor='lightblue')))
-
-chart = alt.layer(line1, line2).resolve_scale(y='independent')
-
-st.altair_chart(chart, use_container_width=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-st.header('Mean number of points vs mean execution time for each matcher') 
-points = []
-number = 0
+image_folder = "/mnt/d/Pobrane/dataset/dataset_lot2/"
+dataset_path = "./experiments/alt_1500/"
 
 for matcher in matchers:
+  
+    data = pd.read_csv(dataset_path + str(matcher).lower() + ".csv", sep=";")
     
-    number += 1
+    # for i in range(len(data)):
+    i = 0  
+    # print(data['file_gopro'][i])  
     
-    matcher_data = pd.read_csv(dataset_path + matcher + ".csv", sep=";")
-    time_mean = pd.concat([matcher_data['time_arcgis'], matcher_data['time_google'], matcher_data['time_geoportal']]).mean()
-    ransac_mean = pd.concat([matcher_data['ransac_arcgis'], matcher_data['ransac_google'], matcher_data['ransac_geoportal']]).mean()
-
-    if "+" in matcher:
-        matcher = matcher.replace("+", "+\n")
-        
-    points.append({"number": number, "matcher": matcher, "X": time_mean, "Y": ransac_mean})
+    image = cv2.imread(image_folder + "gopro/" + data['file_gopro'][i])
+    with open(dataset_path + "gopro/" + data['file_gopro'][i][:-3] + 'json', 'r') as file:
+        json_data = json.load(file)
     
-data = pd.DataFrame(points, columns=['number', 'matcher', 'X', 'Y'])
+    lat = json_data['lat']
+    lon = json_data['lon']
+    z = zoomFromAGL(json_data['altitude_agl']) +1
+    
+    if not isinstance(data['H_arcgis'][i], str):
+        print(matcher, "\t\t-", data['file_gopro'][i])
+        continue
+    else:
+        print(matcher, "\t\t+", data['file_gopro'][i])
+
+    H = np.array(data['H_arcgis'][i].replace("[", "").replace("]", "").split(",")).astype(np.float32).reshape(3, 3)
+    
+    H = np.linalg.inv(H)
+    image_H = cv2.warpPerspective(image, H, (1792, 1792))
+    
+    map7x7 = map_from_center_tile(z, latlon2tiles_float(lat, lon, z))
+    # map7x7 = cv2.imread("/mnt/d/Pobrane/dataset/dataset_lot2/gopro_H/100327_map.jpg")
+    
+    cv2.imwrite(image_folder + "gopro_H/" + data['file_gopro'][i][:-4] + "_map" + ".jpg", map7x7)
+    exit()
+    cv2.imwrite(image_folder + "gopro_H/" + data['file_gopro'][i][:-4] + "_" + matcher + ".jpg", overlay_images(map7x7, image_H))
     
     
-    
-    
-    
-    
-st.header('matplotlib - Mean number of points vs mean execution time for each matcher')     
-import matplotlib.pyplot as plt
-from adjustText import adjust_text
-
-fig, ax = plt.subplots()
-
-ax.scatter(data['X'], data['Y'], s=3)
-ax.grid(True, which='both')
-ax.set_xlabel('Execution time [ms]')
-ax.set_ylabel('Number of points (RANSAC)')
-ax.minorticks_on()
-
-texts = []
-for i, txt in enumerate(data['number']):
-    texts.append(ax.text(data['X'].iloc[i], data['Y'].iloc[i], txt, fontsize=5, ha='center', va='bottom'))
-
-adjust_text(texts)
-st.pyplot(fig)
-
-output_text = ', '.join([f"{point['number']}-{point['matcher']}" for point in points])
-
-st.write(output_text)
-
-
-
-
-
-
-st.header('Violin plots') 
-
-json_data = pd.DataFrame()
-
-for filename in filename_list:
-    with open(dataset_path + "gopro/" + str(filename) + '.json', 'r') as file:
-        data = json.load(file)
-        data["file_gopro"] = filename
-        data_df = pd.DataFrame([data]) 
-        json_data = pd.concat([json_data, data_df], ignore_index=True)
-
-matchers = matchers[:10]
-points = []
-for matcher in matchers:
-    
-    matcher_data = pd.read_csv(dataset_path + matcher + ".csv", sep=";")
-    
-    for x, y in zip(matcher_data['ransac_arcgis'], json_data['resulant_angle']): #ile punktów było dla kątów (-5, 5), (5-10) itd...
-        points.append({"matcher": matcher, "X": x, "Y": y})
-    
-data = pd.DataFrame(points, columns=['matcher', 'X', 'Y'])
-    
-# Generowanie wykresu wiolinowego
-plt.figure(figsize=(10,6))
-sns.violinplot(x='matcher', y='Y', data=data)
-
-# Wyświetlenie wykresu w Streamlit
-st.pyplot(plt.gcf())
-
-
-
-
-
-
-
-
-st.header('the detailed impact of using yaw trading information for 3 providers')
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.markdown("## Arcgis")
-with col2:
-    st.markdown("## Google")
-with col3:
-    st.markdown("## Geoportal")        
-        
-for matcher in matchers:
-    
-    data = pd.read_csv(dataset_path + matcher + ".csv", sep=";")
-    for i, name in enumerate(data[data.columns[0]]):
-        data.loc[i, data.columns[0]] = int(name[:-4])  
-      
-    st.header(matcher)
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        data = data.sort_values(by=[data.columns[0]])
-        st.line_chart(data, x="file_gopro", y=["ransac_arcgis", "ransac_rot_arcgis"])
-
-    with col2:
-        data = data.sort_values(by=[data.columns[0]])
-        st.line_chart(data, x="file_gopro", y=["ransac_google", "ransac_rot_google"])
-
-    with col3:
-        data = data.sort_values(by=[data.columns[0]])
-        st.line_chart(data, x="file_gopro", y=["ransac_geoportal", "ransac_rot_geoportal"])
-
-
-
+  

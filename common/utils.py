@@ -547,7 +547,7 @@ matcher_zoo = {
         "dense": False,
     },
     "roma": {"config": match_dense.confs["roma"], "dense": True},
-    "DKMv3": {"config": match_dense.confs["dkm"], "dense": True},
+    "dkmv3": {"config": match_dense.confs["dkm"], "dense": True},
     "gluestick": {"config": match_dense.confs["gluestick"], "dense": True},
     "sold2": {"config": match_dense.confs["sold2"], "dense": True},
 }
