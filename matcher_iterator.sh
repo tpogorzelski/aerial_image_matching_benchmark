@@ -10,7 +10,7 @@ matchers_list=("LoFTR" "TopicFM" "AspanFormer" "DeDoDe" "SuperPoint+SuperGlue" "
 
 # fail_cuda=("d2net" "rord" "lanet" "DKMv3")
 
-matchers_list=("aspanformer")
+matchers_list=("SuperPoint+LightGlue")
 
 for matcher in "${matchers_list[@]}"; do
     echo "$matcher"

@@ -1,0 +1,2 @@
+[2024/08/05 18:52:45 hloc INFO] Load lightglue model done.
+[2024/08/05 18:52:47 hloc INFO] Load SuperPoint model done.

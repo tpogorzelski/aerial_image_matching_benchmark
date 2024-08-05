@@ -9,7 +9,7 @@ from hloc import matchers, extractors
 from hloc.utils.base_model import dynamic_load
 from hloc import match_dense, match_features, extract_features
 from hloc.utils.viz import add_text, plot_keypoints
-from .viz import draw_matches, fig2im, plot_images, plot_color_line_matches
+# from .viz import draw_matches, fig2im, plot_images, plot_color_line_matches
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -550,4 +550,7 @@ matcher_zoo = {
     "dkmv3": {"config": match_dense.confs["dkm"], "dense": True},
     "gluestick": {"config": match_dense.confs["gluestick"], "dense": True},
     "sold2": {"config": match_dense.confs["sold2"], "dense": True},
+    # "omniglue": {"config": match_dense.confs["omniglue"], "dense": True},
+    # "dust3r": {"config": match_dense.confs["dust3r"], "dense": True},
+    # "gim(dkm)": {"config": match_dense.confs["gim(dkm)"], "dense": True},
 }
