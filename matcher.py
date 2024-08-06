@@ -78,22 +78,22 @@ if __name__ == "__main__":
             image1 = cv2.imread(dataset_folder + "/" + provider + "/" + filename)
             #image1 = cv2.resize(image1, (320, 320))
             
-            try:
-                torch.cuda.empty_cache()
-                start_time = time.time()
-                output = utils.run_matching(image0, image1, match_threshold, extract_conf, extractor, model, match_conf, matcher, None)
-                csv_row.update({'time_'+provider:int((time.time() - start_time)*1000)})
-                csv_row.update({'raw_'+provider:output[3]['number raw matches']})         
-                csv_row.update({'ransac_'+provider:output[3]['number ransac matches']})
+            # try:
+            torch.cuda.empty_cache()
+            start_time = time.time()
+            output = utils.run_matching(image0, image1, match_threshold, extract_conf, extractor, model, match_conf, matcher, None)
+            csv_row.update({'time_'+provider:int((time.time() - start_time)*1000)})
+            csv_row.update({'raw_'+provider:output[3]['number raw matches']})         
+            csv_row.update({'ransac_'+provider:output[3]['number ransac matches']})
+            
+            if len(output[5]["geom_info"]) == 4:
+                csv_row.update({'H_'+provider:output[5]["geom_info"]["Homography"]})
+                csv_row.update({'F_'+provider:output[5]["geom_info"]["Fundamental"]})
                 
-                if len(output[5]["geom_info"]) == 4:
-                    csv_row.update({'H_'+provider:output[5]["geom_info"]["Homography"]})
-                    csv_row.update({'F_'+provider:output[5]["geom_info"]["Fundamental"]})
-                    
-                del output
+            del output
                 
-            except Exception as e:
-                print(e)
+            # except Exception as e:
+            #     print(e)
                 
             image0 = cv2.imread(dataset_folder + "/gopro_H/" + filename)
                 
