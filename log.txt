@@ -1,2 +1,1 @@
-[2024/08/06 20:12:18 hloc INFO] Load lightglue model done.
-[2024/08/06 20:12:20 hloc INFO] Load SuperPoint model done.
+[2024/08/06 21:18:06 hloc INFO] Loaded LoFTR with weights outdoor
