@@ -66,15 +66,17 @@ if __name__ == "__main__":
         extract_conf["model"]["max_keypoints"] = extract_max_keypoints
         extract_conf["model"]["keypoint_threshold"] = keypoint_threshold
         extractor = utils.get_feature_model(extract_conf) 
-           
-    for filename in tqdm.tqdm([filename for filename in sorted(os.listdir(dataset_folder + "/gopro")) if filename.endswith('.jpg')]):
+    
+    for filename in tqdm.tqdm([filename for filename in sorted(os.listdir(dataset_folder + "/gopro")) if filename.endswith('.json')]):
         
+        filename = filename.split(".")[0]
+      
         csv_row = {'file_gopro': filename}
         
         for provider in list_providers:
                      
             # image0 = cv2.imread(dataset_folder + "/gopro/" + filename)
-            image1 = cv2.imread(dataset_folder + "/" + provider + "/" + filename)
+            image1 = cv2.imread(dataset_folder + "/" + provider + "/" + filename + ".jpg")
             
             # try:
             #     torch.cuda.empty_cache()
@@ -93,7 +95,7 @@ if __name__ == "__main__":
             # except Exception as e:
             #     print(e)
                 
-            image0 = cv2.imread(dataset_folder + "/gopro_H/" + filename)
+            image0 = cv2.imread(dataset_folder + "/gopro_H/" + filename + ".jpg")
                 
             try:    
                 start_time = time.time()
