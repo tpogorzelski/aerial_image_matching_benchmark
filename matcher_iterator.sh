@@ -1,13 +1,16 @@
 #!/bin/bash
 
-if [ ! -d "third_party/SGMNet/weights" ]; then
-    tar -xzf third_party/SGMNet/weights.tar.gz -C third_party/SGMNet
-fi
+# if [ ! -d "third_party/SGMNet/weights" ]; then
+#     tar -xzf third_party/SGMNet/weights.tar.gz -C third_party/SGMNet
+# fi
 
-dataset_path="/path/to/dataset"
-matchers_list=("loftr" "topicfm" "aspanformer" "dedode" "superpoint+superglue" "superpoint+lightglue" "disk" "disk+dualsoftmax" "superpoint+dualsoftmax" "disk+lightglue" "superpoint+mnn" "sift+sgmnet" "sosnet" "hardnet" "d2net" "rord" "alike" "lanet" "r2d2" "darkfeat" "sift" "roma" "DKMv3" "gluestick" "sold2")
+dataset_path="/mnt/e/Czajka_dataset/Karol"
+matchers_list=("LoFTR" "TopicFM" "AspanFormer" "DeDoDe" "SuperPoint+SuperGlue" "SuperPoint+LightGlue" "DISK" "DISK+dualsoftmax" "superpoint+dualsoftmax" "DISK+LightGlue" "SuperPoint+MNN" "SIFT+SGMNet" "SOSNet" "HardNet" "D2Net" "RORD" "ALIKE" "LANET" "R2D2" "DARKFeat" "SIFT" "ROMA" "DKMv3" "GlueStick" "SOLD2")
 
-for matcher in "${matchers_list[@]}"; do
-    echo "$matcher"
-    python3 matcher.py $dataset_path $matcher
+for folder in $dataset_path/*; do
+    if [ -d "$folder" ]; then
+        for matcher in "${matchers_list[@]}"; do
+            python3 matcher.py $folder $matcher
+        done
+    fi
 done

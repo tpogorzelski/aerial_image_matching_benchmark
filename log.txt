@@ -1,0 +1,2 @@
+[2024/08/13 10:25:50 hloc INFO] Load SGMNet model done.
+[2024/08/13 10:25:52 hloc INFO] Load SIFT model done.
