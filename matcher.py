@@ -72,35 +72,34 @@ if __name__ == "__main__":
         
         for provider in list_providers:
             
-            image0 = cv2.imread(dataset_folder + "/gopro_H/" + filename)
-            #image0 = cv2.resize(image0, (320, 320))
-            image1 = cv2.imread(dataset_folder + "/" + provider + "/" + filename)
-            #image1 = cv2.resize(image1, (320, 320))
+            image_map = cv2.imread(dataset_folder + "/" + provider + "/" + filename)
+            
+            # image_camera = cv2.imread(dataset_folder + "/gopro/" + filename)
             
             # try:
             #     torch.cuda.empty_cache()
             #     start_time = time.time()
-            #     output = utils.run_matching(image0, image1, match_threshold, extract_conf, extractor, model, match_conf, matcher, None)
+            #     output = utils.run_matching(image_camera, image_map, match_threshold, extract_conf, extractor, model, match_conf, matcher, None)
             #     csv_row.update({'time_'+provider:int((time.time() - start_time)*1000)})
             #     csv_row.update({'raw_'+provider:output[3]['number raw matches']})         
             #     csv_row.update({'ransac_'+provider:output[3]['number ransac matches']})
                 
-            #     if len(output[5]["geom_info"]) == 4:
-            #         csv_row.update({'H_'+provider:output[5]["geom_info"]["Homography"]})
-            #         csv_row.update({'F_'+provider:output[5]["geom_info"]["Fundamental"]})
-                
+            #     if "Homography" in output[5]["geom_info"]:
+            #         csv_row.update({'H_rot_'+provider:output[5]["geom_info"]["Homography"]})
+                    
+            #     if "Fundamental" in output[5]["geom_info"]:
+            #         csv_row.update({'F_rot_'+provider:output[5]["geom_info"]["Fundamental"]})
+                    
             #     del output
                 
             # except Exception as e:
             #     print(e)
                 
-            # with open(dataset_folder + "/gopro/" + filename[:-4] + '.json', 'r') as file:
-            #     yaw_angle = json.load(file)['yaw']
-            # image1 = rotate_image(image1, yaw_angle)
+            image_camera = cv2.imread(dataset_folder + "/gopro_H/" + filename)
                 
             try:    
                 start_time = time.time()
-                output = utils.run_matching(image0, image1, match_threshold, extract_conf, extractor, model, match_conf, matcher, None)
+                output = utils.run_matching(image_camera, image_map, match_threshold, extract_conf, extractor, model, match_conf, matcher, None)
                 csv_row.update({'time_rot_'+provider:int((time.time() - start_time)*1000)})
                 csv_row.update({'ransac_rot_'+provider:output[3]['number ransac matches']})
                 
